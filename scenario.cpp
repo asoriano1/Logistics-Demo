@@ -2,17 +2,26 @@
 #include "scenario.h"
 #include <string>
 #include <iostream>
+#include <math.h>
 
 using namespace std;
 
 
 void Scenario::addRobot(Robot r) {
-
-	if (!arena[r.GetPose().x][r.GetPose().y].compare("  ")) {
+	//cout << "addRobot" << endl;
+	//si está la celda vacía
+	if (arena[r.GetPose().x][r.GetPose().y].compare("  ") == 0 ) {
+		//cout << "vacio" << endl;
 		arena[r.GetPose().x][r.GetPose().y] = r.GetId();
 		this->robots.push_back(r);
-	}else
-		cout << "addRobot Error: Some robot already in this position" << endl;
+		//si hay un carro
+	}else if((arena[r.GetPose().x][r.GetPose().y]).at(0) == 'c'){
+		//cout << "carro" << endl;
+		arena[r.GetPose().x][r.GetPose().y] = arena[r.GetPose().x][r.GetPose().y]+r.GetId();
+		this->robots.push_back(r);
+	}else //hay otro robot
+		cout << "addRobot Error: Some robot already in this position: " << arena[r.GetPose().x][r.GetPose().y] << endl;
+		
 }
 
 void Scenario::addCart(Cart c) {
@@ -22,11 +31,12 @@ void Scenario::addCart(Cart c) {
 		this->carts.push_back(c);
 	}
 	else
-		cout << "addRobot Error: There is something already in this position" << endl;
+		cout << "addCart Error: There is something already in this position" << endl;
 }
 
 void Scenario::print() {
 	cout << endl;
+	cout <<"-id:" << this->id <<"-v:" << this->value << "-" << endl;
 	cout <<"----------"<< endl;
 	for (size_t y = 0; y < height; ++y) {
 		cout << "|";
@@ -36,6 +46,7 @@ void Scenario::print() {
 		cout << endl;
 	}
 	cout <<"----------"<< endl;
+	
 }
 
 bool Scenario::checkup(Robot r) {
@@ -69,7 +80,7 @@ bool Scenario::checkright(Robot r) {
 void Scenario::evaluate(Cart c, Pose dest) {
 	//Manhattan distance from cart to destination
 	this->value = fabs(dest.x - c.GetPose().x) + fabs(dest.y - c.GetPose().y);
-	
+	cout << "menor cart to destx:" << dest.x << " c.GetPose().x" << c.GetPose().x << "dest.y" << dest.y << "c.GetPose().y" << c.GetPose().y << "total" << this->value << endl;
 	//find the robot closer to cart
 	float dist = 999;
 	
@@ -77,7 +88,7 @@ void Scenario::evaluate(Cart c, Pose dest) {
 		//cout << "dist[" << i << "]: " << sqrt(pow(c.GetPose().x - this->robots[i].GetPose().x, 2) + pow(c.GetPose().y - this->robots[i].GetPose().y, 2));
 		if (dist > fabs(c.GetPose().x - this->robots[i].GetPose().x) + fabs(c.GetPose().y - this->robots[i].GetPose().y)) {
 			dist = fabs(c.GetPose().x - this->robots[i].GetPose().x) + fabs(c.GetPose().y - this->robots[i].GetPose().y);
-			//cout << "menor" << endl;
+			cout << "menor dist:" << dist << endl;
 		}
 	}
 	this->value = this->value + dist;
@@ -89,8 +100,15 @@ void Scenario::UpdateRobotPose(Robot r, Pose p) {
 			this->robots[i].SetPose(p);
 			//TODO:el hueco que deja solo será vacío si no deja carro
 			cout << " se pone el robot en y:" << p.y << endl;
-			arena[r.GetPose().x][r.GetPose().y] = "  ";	
-			arena[p.x][p.y] = r.GetId();
+			if(arena[r.GetPose().x][r.GetPose().y].at(0) == 'c')
+				arena[r.GetPose().x][r.GetPose().y]=arena[r.GetPose().x][r.GetPose().y].substr(0,2);
+			else
+				arena[r.GetPose().x][r.GetPose().y] = "  ";	
+			if(arena[p.x][p.y].at(0)=='c')
+				arena[p.x][p.y] = arena[p.x][p.y] + r.GetId();
+			else
+				arena[p.x][p.y] = r.GetId();
+				
 		}
 	}
 }
@@ -100,8 +118,14 @@ void Scenario::UpdateCartPose(Cart c, Pose p) {
 		if (c.GetId() == this->carts[i].GetId()) {
 			this->carts[i].SetPose(p);
 			//TODO:el hueco que deja solo será vacío si no deja carro
+
+			//si se va a mover un carro es porque hay un robot que lo mueve
+			//pero el robot puede haber actualizado su posición ya y el carro hacerlo después
+			if(arena[p.x][p.y].at(0) == 'r')
+				arena[p.x][p.y] = arena[p.x][p.y] + c.GetId();
+			else
+				arena[p.x][p.y] = arena[c.GetPose().x][c.GetPose().y];
 			arena[c.GetPose().x][c.GetPose().y] = "  ";
-			arena[p.x][p.y] = c.GetId();
 		}
 	}
 }

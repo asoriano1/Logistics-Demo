@@ -18,7 +18,7 @@ public:
 
 	int width;
 
-	vector<vector<string>> arena;
+	vector<vector <string> > arena;
 
 	vector<Robot> robots;
 
@@ -56,11 +56,12 @@ public:
 			for (size_t y = 0; y < height; y++)
 				arena[x][y] = "  ";
 
-		addRobot(r1);
-		addRobot(r2);
 		addCart(c1);
 		addCart(c2);
-				
+
+		addRobot(r1);
+		addRobot(r2);
+
 		evaluate(cartselected,destination);
 	
 	}

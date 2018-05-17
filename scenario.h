@@ -18,7 +18,7 @@ public:
 
 	int width;
 
-	vector<vector<string>> arena;
+	vector<vector <string> > arena;
 
 	vector<Robot> robots;
 
@@ -27,6 +27,8 @@ public:
 	float value;
 
 	int id;
+
+	int id_prev;
 
 	Scenario() {}
 	Scenario(int h, int w) {
@@ -42,8 +44,9 @@ public:
 			for (size_t y = 0; y < width; y++)
 				arena[x][y] = "  ";
 	};
-	Scenario(int id, int h, int w, Robot r1, Robot r2, Cart c1, Cart c2, Pose destination, Cart cartselected){
+	Scenario(int id, int prev, int h, int w, Robot r1, Robot r2, Cart c1, Cart c2, Pose destination, Cart cartselected) {
 		this->id = id;
+		this->id_prev = prev;
 		this->height = h;
 		this->width = w;
 
@@ -56,13 +59,14 @@ public:
 			for (size_t y = 0; y < height; y++)
 				arena[x][y] = "  ";
 
-		addRobot(r1);
-		addRobot(r2);
 		addCart(c1);
 		addCart(c2);
-				
-		evaluate(cartselected,destination);
-	
+
+		addRobot(r1);
+		addRobot(r2);
+
+		evaluate(cartselected, destination);
+
 	}
 	void addRobot(Robot r);
 

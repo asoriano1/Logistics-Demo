@@ -32,13 +32,18 @@ void Scenario::addCart(Cart c) {
 		arena[c.GetPose().x][c.GetPose().y] = c.GetId();
 		this->carts.push_back(c);
 	}
+	else if ((arena[c.GetPose().x][c.GetPose().y]).at(0) == 'r'){
+		//cout << there is a robot here << endl;
+		arena[c.GetPose().x][c.GetPose().y] = c.GetId() + arena[c.GetPose().x][c.GetPose().y];
+		this->carts.push_back(c);
+	}
 	else
 		cout << "addCart Error: There is something already in this position" << endl;
 }
 
 void Scenario::print() {
 	cout << endl;
-	cout << "-id:" << this->id << "-v:" << this->value << "-" << endl;
+	cout << "-id:" << this->id << "-v:" << this->value << "-prof" << this->prof << endl;
 	cout << "----------" << endl;
 	for (size_t y = 0; y < height; ++y) {
 		cout << "|";
@@ -80,20 +85,34 @@ bool Scenario::checkright(Robot r) {
 }
 
 void Scenario::evaluate(Cart c, Pose dest) {
+	
+	//g(n)+h(n)
+	//manhattan_distance + closest robot to cart selected + num_movements(explored_nodes)
+	
+	Pose cart_pose;
+
+	//search where is now the cart c
+	for (int i = 0; i < this->carts.size(); ++i) {
+		if (c.GetId() == carts.at(i).GetId()) {
+			cart_pose = carts.at(i).GetPose();
+			break;
+		}
+	}
+
 	//Manhattan distance from cart to destination
-	this->value = fabs(dest.x - c.GetPose().x) + fabs(dest.y - c.GetPose().y);
-	cout << "menor cart to destx:" << dest.x << " c.GetPose().x" << c.GetPose().x << "dest.y" << dest.y << "c.GetPose().y" << c.GetPose().y << "total" << this->value << endl;
+	this->value = fabs(dest.x - cart_pose.x) + fabs(dest.y - cart_pose.y);
+	//cout << "menor cart to destx:" << dest.x << " c.GetPose().x" << cart_pose.x << "dest.y" << dest.y << "c.GetPose().y" << cart_pose.y << "total" << this->value << endl;
 	//find the robot closer to cart
 	float dist = 999;
 
 	for (int i = 0; i < this->robots.size(); ++i) {
 		//cout << "dist[" << i << "]: " << sqrt(pow(c.GetPose().x - this->robots[i].GetPose().x, 2) + pow(c.GetPose().y - this->robots[i].GetPose().y, 2));
-		if (dist > fabs(c.GetPose().x - this->robots[i].GetPose().x) + fabs(c.GetPose().y - this->robots[i].GetPose().y)) {
-			dist = fabs(c.GetPose().x - this->robots[i].GetPose().x) + fabs(c.GetPose().y - this->robots[i].GetPose().y);
-			cout << "menor dist:" << dist << endl;
+		if (dist > fabs(cart_pose.x - this->robots[i].GetPose().x) + fabs(cart_pose.y - this->robots[i].GetPose().y)) {
+			dist = fabs(cart_pose.x - this->robots[i].GetPose().x) + fabs(cart_pose.y - this->robots[i].GetPose().y);
+			//cout << "menor dist:" << dist << endl;
 		}
 	}
-	this->value = this->value + dist;
+	this->value = this->value + dist + this->prof;
 }
 
 void Scenario::UpdateRobotPose(Robot r, Pose p) {

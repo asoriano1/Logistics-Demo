@@ -29,6 +29,8 @@ public:
 	int id;
 
 	int id_prev;
+	
+	int prof;
 
 	Scenario() {}
 	Scenario(int h, int w) {
@@ -44,7 +46,7 @@ public:
 			for (size_t y = 0; y < width; y++)
 				arena[x][y] = "  ";
 	};
-	Scenario(int id, int prev, int h, int w, Robot r1, Robot r2, Cart c1, Cart c2, Pose destination, Cart cartselected) {
+/*	Scenario(int id, int prev, int h, int w, Robot r1, Robot r2, Cart c1, Cart c2, Pose destination, Cart cartselected) {
 		this->id = id;
 		this->id_prev = prev;
 		this->height = h;
@@ -67,7 +69,35 @@ public:
 
 		evaluate(cartselected, destination);
 
+	}*/
+	
+	Scenario(int id, int prev, int h, int w, vector<Robot> robots, vector<Cart> carts, int prof) {
+		this->id = id;
+		this->id_prev = prev;
+		this->height = h;
+		this->width = w;
+		this->prof = prof;
+
+		arena.resize(width);
+		for (size_t x = 0; x < width; x++)
+			arena[x].resize(height);
+
+
+		for (size_t x = 0; x < width; x++)
+			for (size_t y = 0; y < height; y++)
+				arena[x][y] = "  ";
+
+		for (int i = 0; i < robots.size(); ++i) {
+			addRobot(robots.at(i));
+		}
+		for (int i = 0; i < carts.size(); ++i) {
+			addCart(carts.at(i));
+		}
+		
+		//evaluate(cartselected, destination);
+
 	}
+
 	void addRobot(Robot r);
 
 	void addCart(Cart c);

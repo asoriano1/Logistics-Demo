@@ -82,7 +82,6 @@ public:
 		for (size_t x = 0; x < width; x++)
 			arena[x].resize(height);
 
-
 		for (size_t x = 0; x < width; x++)
 			for (size_t y = 0; y < height; y++)
 				arena[x][y] = "  ";
@@ -117,6 +116,12 @@ public:
 	void UpdateRobotPose(Robot r, Pose p);
 
 	void UpdateCartPose(Cart r, Pose p);
+	
+	void MoveRobotTo(Robot r, Pose p);
+	
+	void MoveRobotWithCartTo(Robot r, Pose p);
+	
+	bool IsSolved(Cart c, Pose p);
 };
 
 #endif

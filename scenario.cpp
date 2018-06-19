@@ -104,32 +104,47 @@ void Scenario::evaluate(Cart c, Pose dest) {
 	//cout << "menor cart to destx:" << dest.x << " c.GetPose().x" << cart_pose.x << "dest.y" << dest.y << "c.GetPose().y" << cart_pose.y << "total" << this->value << endl;
 	//find the robot closer to cart
 	float dist = 999;
-
+	float total_movs = 0;
 	for (int i = 0; i < this->robots.size(); ++i) {
 		//cout << "dist[" << i << "]: " << sqrt(pow(c.GetPose().x - this->robots[i].GetPose().x, 2) + pow(c.GetPose().y - this->robots[i].GetPose().y, 2));
 		if (dist > fabs(cart_pose.x - this->robots[i].GetPose().x) + fabs(cart_pose.y - this->robots[i].GetPose().y)) {
-			dist = fabs(cart_pose.x - this->robots[i].GetPose().x) + fabs(cart_pose.y - this->robots[i].GetPose().y);
+			dist = fabs(cart_pose.x - this->robots[i].GetPose().x) + fabs(cart_pose.y - this->robots[i].GetPose().y);			
 			//cout << "menor dist:" << dist << endl;
 		}
+		//count the total number of movements
+		total_movs = total_movs + this->robots[i].n_mov;
 	}
-	this->value = this->value + dist + this->prof;
+	this->value = this->value + dist + this->prof + total_movs;
+	
 }
 
+/**
+ * Set the robot in one pose
+ * Sustituido para penalizar si se coge/deja carro
+ * 
+ * */
 void Scenario::UpdateRobotPose(Robot r, Pose p) {
+	
 	for (int i = 0; i < this->robots.size(); ++i) {
 		if (r.GetId() == this->robots[i].GetId()) {
 			this->robots[i].SetPose(p);
+			this->robots[i].n_mov++;
+			//
+			//cout << "el robot "<< this->robots[i].GetId() << " se ha movido "<< this->robots[i].n_mov << " veces" << endl;
 			//TODO:el hueco que deja solo ser? vac?o si no deja carro
-			cout << " se pone el robot en y:" << p.y << endl;
-			if (arena[r.GetPose().x][r.GetPose().y].at(0) == 'c')
+			//cout << " se pone el robot en y:" << p.y << endl;
+			//posición donde estaba ese robot
+			//si había un carro, dejo el carro solo
+			if (arena[r.GetPose().x][r.GetPose().y].at(0) == 'c'){
 				arena[r.GetPose().x][r.GetPose().y] = arena[r.GetPose().x][r.GetPose().y].substr(0, 2);
-			else
+			}else{ //si no, no pongo nada
 				arena[r.GetPose().x][r.GetPose().y] = "  ";
-			if (arena[p.x][p.y].at(0) == 'c')
+			}//si en la nueva posición hay un carro, lo pongo
+			if (arena[p.x][p.y].at(0) == 'c'){
 				arena[p.x][p.y] = arena[p.x][p.y] + r.GetId();
-			else
+			}else{ //si no pongo sólo el robot
 				arena[p.x][p.y] = r.GetId();
-
+			}
 		}
 	}
 }
@@ -137,16 +152,89 @@ void Scenario::UpdateRobotPose(Robot r, Pose p) {
 void Scenario::UpdateCartPose(Cart c, Pose p) {
 	for (int i = 0; i < this->carts.size(); ++i) {
 		if (c.GetId() == this->carts[i].GetId()) {
-			this->carts[i].SetPose(p);
+			this->carts[i].SetPose(p);			
 			//TODO:el hueco que deja solo ser? vac?o si no deja carro
 
 			//si se va a mover un carro es porque hay un robot que lo mueve
 			//pero el robot puede haber actualizado su posici?n ya y el carro hacerlo despu?s
-			if (arena[p.x][p.y].at(0) == 'r')
-				arena[p.x][p.y] = arena[p.x][p.y] + c.GetId();
-			else
+			//si hay un robot en la nueva posición
+			if (arena[p.x][p.y].at(0) == 'r'){
+				arena[p.x][p.y] = c.GetId() + arena[p.x][p.y];
+			}else{ //si no pongo sólo el carro
 				arena[p.x][p.y] = arena[c.GetPose().x][c.GetPose().y];
+			}//en cualquier otro caso la posición anterior se quedará vacía, ya que un carro no se puede mover sólo
 			arena[c.GetPose().x][c.GetPose().y] = "  ";
 		}
 	}
+}
+
+void Scenario::MoveRobotTo(Robot r, Pose p) {
+	
+	for (int i = 0; i < this->robots.size(); ++i) {
+		if (r.GetId() == this->robots[i].GetId()) {
+			this->robots[i].SetPose(p);
+			this->robots[i].n_mov++;		
+			//para minimizar el coger/dejar carros se cuenta coger y dejar como un movimiento más	
+			if(this->robots[i].hasACart()){
+				this->robots[i].placeCart();
+				this->robots[i].n_mov++;			
+			}
+			//cout << "el robot "<< this->robots[i].GetId() << " se ha movido "<< this->robots[i].n_mov << " veces" << endl;
+			//TODO:el hueco que deja solo ser? vac?o si no deja carro
+			//cout << " se pone el robot en y:" << p.y << endl;
+			//posición donde estaba ese robot
+			//si había un carro, dejo el carro solo
+			if (arena[r.GetPose().x][r.GetPose().y].at(0) == 'c'){
+				arena[r.GetPose().x][r.GetPose().y] = arena[r.GetPose().x][r.GetPose().y].substr(0, 2);
+			}else{ //si no, no pongo nada
+				arena[r.GetPose().x][r.GetPose().y] = "  ";
+			}//si en la nueva posición hay un carro, lo pongo
+			if (arena[p.x][p.y].at(0) == 'c'){
+				arena[p.x][p.y] = arena[p.x][p.y] + r.GetId();
+			}else{ //si no pongo sólo el robot
+				arena[p.x][p.y] = r.GetId();
+			}
+		}
+	}
+}
+
+void Scenario::MoveRobotWithCartTo(Robot r, Pose p) {
+	
+	for (int i = 0; i < this->robots.size(); ++i) {
+		if (r.GetId() == this->robots[i].GetId()) {
+			this->robots[i].SetPose(p);
+			this->robots[i].n_mov++;
+			//para minimizar el coger/dejar carros se cuenta coger y dejar como un movimiento más
+			if(!this->robots[i].hasACart()){
+				this->robots[i].pickCart();
+				this->robots[i].n_mov++;			
+			}
+			//
+			//cout << "el robot "<< this->robots[i].GetId() << " se ha movido "<< this->robots[i].n_mov << " veces" << endl;
+			//TODO:el hueco que deja solo ser? vac?o si no deja carro
+			//cout << " se pone el robot en y:" << p.y << endl;
+			//posición donde estaba ese robot
+			//si había un carro, dejo el carro solo
+			if (arena[r.GetPose().x][r.GetPose().y].at(0) == 'c'){
+				arena[r.GetPose().x][r.GetPose().y] = arena[r.GetPose().x][r.GetPose().y].substr(0, 2);
+			}else{ //si no, no pongo nada
+				arena[r.GetPose().x][r.GetPose().y] = "  ";
+			}//si en la nueva posición hay un carro, lo pongo
+			if (arena[p.x][p.y].at(0) == 'c'){
+				arena[p.x][p.y] = arena[p.x][p.y] + r.GetId();
+			}else{ //si no pongo sólo el robot
+				arena[p.x][p.y] = r.GetId();
+			}
+		}
+	}
+}
+
+bool Scenario::IsSolved(Cart c, Pose p){
+
+	for (int i = 0; i < this->carts.size(); ++i) {
+		if (c.GetId() == this->carts[i].GetId() && (this->carts[i].GetPose().x == p.x && this->carts[i].GetPose().y == p.y)) {
+			return true;
+		}
+	}
+	return false;
 }

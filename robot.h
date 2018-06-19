@@ -11,12 +11,14 @@ private:
 	string id;
 	Pose pose;
 	bool hasCart;
+	
 public:
 	Robot() {};
 	Robot(string ide, int x, int y){
 		this->id = ide;
 		this->pose = Pose(x, y);
 		this->hasCart = false;
+		n_mov = 0;
 	};
 	void SetId(string ide) { this->id = ide; };
 	void SetPose(Pose p) { this->pose = p; };
@@ -25,6 +27,7 @@ public:
 	void pickCart() { this->hasCart = true; };
 	void placeCart() { this->hasCart = false; };
 	bool hasACart() { return this->hasCart; };
+	int n_mov;
 }; 
 
 #endif

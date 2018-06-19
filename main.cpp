@@ -43,11 +43,18 @@ Cart whichcartis(Scenario scn, Pose p);
 int whichcartis_indx(Scenario scn, Pose p);
 bool isalreadydefined(Scenario scn);
 void addtonodes(Scenario scn);
+void evolute_scn(Scenario scn, int ind, Pose p, bool level_up);
 
 using namespace std;
 vector < Scenario > nodos;
 vector < Scenario > nodos_activos;
 vector < Scenario > nodos_visitados;
+int global_scn_id;
+int global_prof_id;
+
+Pose pose_final_dest;
+Cart cart_final_sel;
+Pose new_pose, new_new_pose;
 
 // Driver program to test methods of graph class
 int main()
@@ -58,9 +65,9 @@ int main()
 	const int num_robots = 3;
 	vector < vector < bool > > maze;
 
-	vector < Pose > new_poses;
+	vector < Pose > new_candidate_poses;
 
-	Pose new_pose;
+
 
 	//Robot r1 = Robot("r1", 0, 2);
 	//Robot r2 = Robot("r2", 1, 2);
@@ -68,25 +75,23 @@ int main()
 	vector < Robot > Robots;
 	Robots.push_back(Robot("r1", 0, 2));
 	Robots.push_back(Robot("r2", 1, 2));
-	Robots.push_back(Robot("r3", 2, 2));
+	//Robots.push_back(Robot("r3", 2, 2));
 
 	vector < Cart > Carts;
 	Carts.push_back(Cart("c1", 0, 0));
 	Carts.push_back(Cart("c2", 1, 0));
 	Carts.push_back(Cart("c3", 1, 1));
 
-	int id = 0;
+	global_scn_id = 0;
+	global_prof_id = 0;
 
-	//mission
-	//TODO QUE EL CARRO SEA GLOBAL PERO SE ACTUALICE
-	//igual s  que iba (VUELVE A COMO ESTABA A VER)
-	//Cart cart_sel = c1;
-	Pose pose_dest = Pose(2, 0);
-	Cart cart_selected = Carts.at(0);
-
-	Scenario scn = Scenario(id, -1, 3, 3, Robots, Carts, 0);
+	Scenario scn = Scenario(global_scn_id, -1, 3, 3, Robots, Carts, global_prof_id);
 
 	Scenario scn_sel;
+	
+	//MISSION
+	pose_final_dest = Pose(2, 0);
+	cart_final_sel = Carts.at(0);
 
 	/*scn.addRobot(r1);
 	scn.addRobot(r2);
@@ -95,22 +100,14 @@ int main()
 	*/
 	scn.print();
 	
-	scn.evaluate(cart_selected, pose_dest);
+	scn.evaluate(cart_final_sel, pose_final_dest);
 
 	cout << "-value-" << scn.value << endl;
 	
-	//a ade el primer nodo
+	//add the first node
 	nodos_activos.push_back(scn);
 	nodos.push_back(scn);
-	//si existe alg n nodo con el valor a 0=>fin
-
-	//si no, selecciona el de menor value y derivalo
-	//si al a adir nodos, se a aden ordenados siempre hay que coger el primero
-
-	//derivate(nodo_actual)
-	//coge el primer robot, puede mover arriba, abajo , izquierda o derecha
-	//si puede crea un escenario nuevo con esa pose
-	//definir un m todo para dar una posici n y decir si hay robot
+	
 	vector <string> robots_visitados;
 	
 	//int iteraciones= 100;
@@ -121,226 +118,44 @@ int main()
 		//al estar ordenados cojo siempre el primer elemento
 		scn_sel = nodos_activos.at(0);
 
-		//lo quito de los activos ahora porque luego no se dónde estará
+		//insert into visited list
 		nodos_visitados.push_back(scn_sel);
+		//remove the node from actived nodes now, otherwise later can be moved
 		nodos_activos.erase(nodos_activos.begin());
 		
-		//si la evaluacion de la primera posicion es 0, he terminado
+		//if value equals prof, end
 		cout << ">>>Derivando el nodo con value:" << scn_sel.value << " id:" << scn_sel.id << " " << endl;
-		if (scn_sel.value == scn_sel.prof) {
+		//if (scn_sel.value == scn_sel.prof) {
+		if(scn_sel.IsSolved(cart_final_sel, pose_final_dest)){
 			cout << " FIN." << endl;
 			nodos_visitados.push_back(scn_sel);
 			break;
 		}
 		else {
-			//para todos los robots
+			
+			//for each robot
 			for (int i = 0; i < scn_sel.robots.size(); i++) {
-				new_pose = Pose(scn_sel.robots[i].GetPose().x + 1, scn_sel.robots[i].GetPose().y);
-
-				if (pose_valid(scn_sel, new_pose) &&
-					!thereisarobot(scn_sel, new_pose)) {
-					cout << "Robot:" << scn_sel.robots[i].GetId() << " puede mover a x + 1 " << endl;
-					//es m s facil clonar.
-					id++;
+				//add the new poses he can reach
+				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x + 1, scn_sel.robots[i].GetPose().y));
+				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x, scn_sel.robots[i].GetPose().y + 1));
+				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x - 1, scn_sel.robots[i].GetPose().y));
+				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x, scn_sel.robots[i].GetPose().y - 1));
 				
-					Scenario newscn = Scenario(id, scn_sel.id, scn_sel.height, scn_sel.width, scn_sel.robots, scn_sel.carts, scn_sel.prof+1);
-					//modificar
-					newscn.UpdateRobotPose(newscn.robots[i], new_pose);
-					//evaluar
-					newscn.evaluate(cart_selected, pose_dest);
-					cout << "escenario id:" << newscn.id << endl;
-					//a adir 
-					//1  que no est  ya definido ese escenario
-					if (!isalreadydefined(newscn)) {
-						addtonodes(newscn);
-					}
-					else {
-						id--;
-					}
-
-					//si adem s hay un carro en la misma posici n: puedo mover el carro conmigo
-					// comprobar adem s que si se va a mover con un carro y hay otro carro delante no puede moverse
-					if (thereisacart(scn_sel, scn_sel.robots[i].GetPose()) && !thereisacart(scn_sel, new_pose)) {
-						//es m s f cil clonar.
-						id++;
-						Scenario newscn = Scenario(id, scn_sel.id, scn_sel.height, scn_sel.width, scn_sel.robots, scn_sel.carts, scn_sel.prof+1);
-						//modificar robot
-						newscn.UpdateRobotPose(newscn.robots[i], new_pose);
-						//get the cart
-						int cart_indx = whichcartis_indx(newscn, scn_sel.robots[i].GetPose());
-						//modify the cart in the new scenario
-						//TODO: POR QUE AQU  ES INDICE?????
-						newscn.UpdateCartPose(newscn.carts[cart_indx], new_pose);
-						//evaluar
-						newscn.evaluate(cart_selected, pose_dest);
-						//a adir//TODO:si a ado de manera ordenada, hago que siempre tenga que coger el primero nodos.at(0)
-						if (!isalreadydefined(newscn)) {
-							cout << "ademas se lleva el carro" << endl;
-							addtonodes(newscn);
-						}
-					}
+				//for each candidate pose there is a new scenario
+				while(!new_candidate_poses.empty()){
+					new_pose = new_candidate_poses.back();
+					new_candidate_poses.pop_back();			
+					evolute_scn(scn_sel, i, new_pose, true);
 
 				}
-				//si uno puede moverse en y + 1
-				new_pose = Pose(scn_sel.robots[i].GetPose().x, scn_sel.robots[i].GetPose().y + 1);
-				if (pose_valid(scn_sel, new_pose) &&
-					!thereisarobot(scn_sel, new_pose)) {
-					cout << "Robot:" << scn_sel.robots[i].GetId() << " puede mover a y + 1 " << endl;
-					//es m s f cil clonar.
-					id++;
-					Scenario newscn = Scenario(id, scn_sel.id, scn_sel.height, scn_sel.width, scn_sel.robots, scn_sel.carts, scn_sel.prof+1);
-					//modificar
-					newscn.UpdateRobotPose(newscn.robots[i], new_pose);
-					//evaluar
-					newscn.evaluate(cart_selected, pose_dest);
-					cout << "escenario id:" << newscn.id << endl;
-					//a adir 
-					//TODO:
-					//1  que no est  ya definido ese escenario
-					if (!isalreadydefined(newscn)) {
-						addtonodes(newscn);
-					}
-					else {
-						id--;
-					}
-
-					//si adem s hay un carro en la misma posici n: puedo mover el carro conmigo
-					// comprobar adem s que si se va a mover con un carro y hay otro carro delante no puede moverse
-					if (thereisacart(scn_sel, scn_sel.robots[i].GetPose()) && !thereisacart(scn_sel, new_pose)) {
-						//es m s f cil clonar.
-						id++;
-						Scenario newscn = Scenario(id, scn_sel.id, scn_sel.height, scn_sel.width, scn_sel.robots, scn_sel.carts, scn_sel.prof+1);
-						//modificar robot
-						newscn.UpdateRobotPose(newscn.robots[i], new_pose);
-						//get the cart
-						int cart_indx = whichcartis_indx(newscn, scn_sel.robots[i].GetPose());
-						//modify the cart in the new scenario
-						//TODO: POR QUE AQU  ES INDICE?????
-						newscn.UpdateCartPose(newscn.carts[cart_indx], new_pose);
-						//evaluar
-						newscn.evaluate(cart_selected, pose_dest);
-						//a adir//TODO:si a ado de manera ordenada, hago que siempre tenga que coger el primero nodos.at(0)
-						if (!isalreadydefined(newscn)) {
-							cout << "ademas se lleva el carro" << endl;
-							addtonodes(newscn);
-						}
-					}
-
-				}
-				//si uno puede moverse en x - 1
-				new_pose = Pose(scn_sel.robots[i].GetPose().x - 1, scn_sel.robots[i].GetPose().y);
-				if (pose_valid(scn_sel, new_pose) &&
-					!thereisarobot(scn_sel, new_pose)) {
-					cout << "Robot:" << scn_sel.robots[i].GetId() << " puede mover a x - 1 [ " << scn_sel.robots[i].GetPose().x - 1 << " ]" << endl;
-					//es m s f cil clonar.
-					id++;
-					Scenario newscn = Scenario(id, scn_sel.id, scn_sel.height, scn_sel.width, scn_sel.robots, scn_sel.carts, scn_sel.prof+1);
-					//modificar
-					newscn.UpdateRobotPose(newscn.robots[i], new_pose);
-					//evaluar
-					newscn.evaluate(cart_selected, pose_dest);
-					cout << "escenario id:" << newscn.id << endl;
-					//a adir 
-					//TODO:
-					//1  que no est  ya definido ese escenario
-					if (!isalreadydefined(newscn)) {
-						addtonodes(newscn);
-					}
-					else {
-						id--;
-					}
-
-					//si adem s hay un carro en la misma posici n: puedo mover el carro conmigo
-					// comprobar adem s que si se va a mover con un carro y hay otro carro delante no puede moverse
-					if (thereisacart(scn_sel, scn_sel.robots[i].GetPose()) && !thereisacart(scn_sel, new_pose)) {
-						//es m s f cil clonar.
-						id++;
-						Scenario newscn = Scenario(id, scn_sel.id, scn_sel.height, scn_sel.width, scn_sel.robots, scn_sel.carts, scn_sel.prof+1);
-						//modificar robot
-						newscn.UpdateRobotPose(newscn.robots[i], new_pose);
-						//get the cart
-						int cart_indx = whichcartis_indx(newscn, scn_sel.robots[i].GetPose());
-						//modify the cart in the new scenario
-						//TODO: POR QUE AQU  ES INDICE?????
-						newscn.UpdateCartPose(newscn.carts[cart_indx], new_pose);
-						//evaluar
-						newscn.evaluate(cart_selected, pose_dest);
-						//a adir//TODO:si a ado de manera ordenada, hago que siempre tenga que coger el primero nodos.at(0)
-						if (!isalreadydefined(newscn)) {
-							cout << "ademas se lleva el carro" << endl;
-							addtonodes(newscn);
-						}
-					}
-
-				}
-				//si uno puede moverse en y - 1
-				new_pose = Pose(scn_sel.robots[i].GetPose().x, scn_sel.robots[i].GetPose().y - 1);
-				if (pose_valid(scn_sel, new_pose) &&
-					!thereisarobot(scn_sel, new_pose)) {
-					cout << "Robot:" << scn_sel.robots[i].GetId() << " puede mover a y - 1 " << endl;
-					//es m s f cil clonar.
-					id++;
-					Scenario newscn = Scenario(id, scn_sel.id, scn_sel.height, scn_sel.width, scn_sel.robots, scn_sel.carts, scn_sel.prof+1);
-					//modificar
-					newscn.UpdateRobotPose(newscn.robots[i], new_pose);
-					//evaluar
-					newscn.evaluate(cart_selected, pose_dest);
-					cout << "escenario id:" << newscn.id << endl;
-					//cout << "la pose en y es:" << newscn.robots[i].GetPose().y << endl;
-					//newscn.print();
-					//a adir 
-					//TODO:
-					//1  que no est  ya definido ese escenario
-					if (!isalreadydefined(newscn)) {
-						addtonodes(newscn);
-					}
-					else {
-						id--;
-					}
-
-					//si adem s hay un carro en la misma posici n: puedo mover el carro conmigo
-					// comprobar adem s que si se va a mover con un carro y hay otro carro delante no puede moverse
-					if (thereisacart(scn_sel, scn_sel.robots[i].GetPose()) && !thereisacart(scn_sel, new_pose)) {
-						//es m s f cil clonar.
-						id++;
-						Scenario newscn = Scenario(id, scn_sel.id, scn_sel.height, scn_sel.width, scn_sel.robots, scn_sel.carts, scn_sel.prof+1);
-						//modificar robot
-						newscn.UpdateRobotPose(newscn.robots[i], new_pose);
-						//get the cart
-						int cart_indx = whichcartis_indx(newscn, scn_sel.robots[i].GetPose());
-						//modify the cart in the new scenario
-						//TODO: POR QUE AQU  ES INDICE?????
-						newscn.UpdateCartPose(newscn.carts[cart_indx], new_pose);
-						//evaluar
-						newscn.evaluate(cart_selected, pose_dest);
-						//a adir//TODO:si a ado de manera ordenada, hago que siempre tenga que coger el primero nodos.at(0)
-						if (!isalreadydefined(newscn)) {
-							cout << "ademas se lleva el carro" << endl;
-							addtonodes(newscn);
-						}
-					}
-
-				}
-				//si hay otro robot en esa pose, mover  r1 a donde est  r2 si r2 puede moverse a cualquier otro sitio.
 
 				//si no puede moverse nada
 				cout << "Robot " << scn_sel.robots[i].GetId() << " NO puede mover mas" << endl;
 			}
-			//una vez he creado todos los nodos quito el que he derivado que ya no tiene por que  ser el primero
-			/*int ind = 0;
-			for (std::vector<Scenario>::iterator it = nodos_activos.begin(); it != nodos_activos.end(); ++it, ++ind) {
-				if (scn_sel.id == it->id) {
-					cout << "borro el escenario con id " << (scn_sel.id) << " o no id " << (it->id) << endl;
-					nodos_visitados.push_back(scn_sel);
-					nodos_activos.erase(it);
-				}
-			}*/
-			//y vuelvo a empezar
-
 		}
 	}
 
-	//Ya tengo la soluciÃ³n
+	//Ya tengo la solucion
 	//Falta buscar en los nodos visitados empezando por el Ãºltimo .back la lista de predecesores por id_prev
 	vector < Scenario > nodos_solucion;
 	//primer nodo es el último añadido
@@ -356,7 +171,7 @@ int main()
 	//están ordenados al revés para evitar insertar al principio (más coste)
 	//si se imprimen al revés deberían mostrar la solución
 	vector<Scenario>::iterator it = nodos_solucion.end(); 
-	cout << ">Numero de movimientos:" << nodos_solucion.size() << endl;
+	cout << ">Numero de movimientos:" << nodos_solucion.size()-1 << endl;
 	cout << ">Nodos creados:" << nodos.size() << endl;
 	cout << ">Nodos visitados:" << nodos_visitados.size() << endl;
 	cout << ">Secuencia de soluciones:" << endl;
@@ -480,6 +295,9 @@ bool isalreadydefined(Scenario scn) {
 }
 
 void addtonodes(Scenario scn) {
+	//MODIFICO EL ID:
+	global_scn_id++;
+		
 	//cout << "intentando anyadir escenario" << endl;
 	//si no hay ningun nodo activo lo añado el último
 	if(nodos_activos.size()<=0){
@@ -513,4 +331,106 @@ void addtonodes(Scenario scn) {
 	//cout << "escenario nuevo con id " << scn.id << ", se anyade el ultimo con value:" << scn.value << endl;
 	scn.print();
 	return;
+}
+
+void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, bool level_up){
+
+	//derivar cada posición de cada robot
+	if (pose_valid(scn, dest_pose)) {
+		//es mas facil clonar.
+		Scenario newscn;
+		if(level_up){			
+			 newscn = Scenario(global_scn_id+1, scn.id, scn.height, scn.width, scn.robots, scn.carts, scn.prof+1);
+		}else{
+			 
+			 newscn = Scenario(global_scn_id+1, scn.id_prev, scn.height, scn.width, scn.robots, scn.carts, scn.prof);
+		}
+		
+		//mueve robots sin carros:
+		//r1-> X
+		//r1-> cX
+		
+		//si no hay ningún robot en la nueva posición puedo actualizar el escenario		
+		if(!thereisarobot(newscn, dest_pose)){
+			//modifica la posición (internamente añade un movimiento al robot)
+			newscn.MoveRobotTo(scn.robots[i_robot], dest_pose);			
+			//evaluar
+			newscn.evaluate(cart_final_sel, pose_final_dest);			
+			//si no está definido ese escenario, se añade
+			if (!isalreadydefined(newscn)) {
+				addtonodes(newscn);
+			}
+		
+			//y busca a partir de i en adelante, el resto de robots dónde puede moverse siempre que no haya otro robot en ese sitio
+			for (int k = i_robot+1; k < scn.robots.size(); k++) {
+
+					vector < Pose > new_new_poses;
+					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x + 1, newscn.robots[k].GetPose().y)); //derecha
+					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y + 1)); //abajo
+					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x - 1, newscn.robots[k].GetPose().y)); //izquierda
+					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y - 1)); //arriba
+					while(!new_new_poses.empty()){
+						new_new_pose = new_new_poses.back();
+						new_new_poses.pop_back();
+						evolute_scn(newscn, k, new_new_pose, false);
+					}							
+			 }
+		}
+		
+		//mueve robots sin carros donde hay otros robots: Mover a la vez en la misma dirección:
+		//Hay casos ya contemplados, por ejemplo, si uno se mueve a la izquierda donde hay un robot pero otro 
+		//r1-> r2 ->r3
+		//si se va a mover a la izquierda y hay otro robot, mira a ver si ese robot puede moverse a la izquierda
+		
+		
+		//mueve robots con carros:
+		//c1r1-> X
+		
+		//si ademas hay un carro en la misma posici n: puedo mover el carro conmigo
+		// ademas que si se va a mover con un carro y hay otro carro delante no puede moverse AUNQUE haya un robot tb
+		if (thereisacart(scn, scn.robots[i_robot].GetPose()) && !thereisacart(scn, dest_pose) && !thereisarobot(scn, dest_pose)) {
+			//es mas facil clonar.
+			Scenario newscn;
+			if(level_up){
+				newscn = Scenario(global_scn_id+1, scn.id, scn.height, scn.width, scn.robots, scn.carts, scn.prof+1);
+			}else{
+				newscn = Scenario(global_scn_id+1, scn.id_prev, scn.height, scn.width, scn.robots, scn.carts, scn.prof);
+			}
+							
+			//modificar robot
+			newscn.MoveRobotWithCartTo(scn.robots[i_robot], dest_pose);
+			//get the cart
+			int cart_indx = whichcartis_indx(newscn, scn.robots[i_robot].GetPose());
+			//modify the cart in the new scenario
+			//TODO: POR QUE AQU  ES INDICE?????
+			newscn.UpdateCartPose(newscn.carts[cart_indx], dest_pose);
+			//evaluar
+			newscn.evaluate(cart_final_sel, pose_final_dest);
+			//anyadir si no existe ya el escenario
+			if (!isalreadydefined(newscn)) {
+				addtonodes(newscn);
+			}
+			
+			//y busca a partir de i en adelante, el resto de robots dónde puede moverse
+			//for (int k = i; k < scn_sel.robots.size(); k++) {			
+			for (int k = i_robot+1; k < scn.robots.size(); k++) {
+				vector < Pose > new_new_poses;
+				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x + 1, newscn.robots[k].GetPose().y));
+				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y + 1));
+				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x - 1, newscn.robots[k].GetPose().y));
+				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y - 1));
+				while(!new_new_poses.empty()){
+					new_new_pose = new_new_poses.back();
+					new_new_poses.pop_back();
+					evolute_scn(newscn, k, new_new_pose, false);
+				}
+					
+			}
+				
+			
+		}
+		
+		
+	}
+
 }

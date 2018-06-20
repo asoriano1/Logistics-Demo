@@ -1,6 +1,12 @@
 // ConsoleApplication1.cpp: define el punto de entrada de la aplicaci√≥n de consola.
 //
 
+//TODO:
+
+//-  A—ADIR EN LA EVALUACI”N EL CAMINO RECORRIDO CON CARRO COGIDO PARA MINIMIZAR RIESGOS
+//-  NO SE MUEVEN EN FILA CUANDO MUEVEN CARROS
+//-  SE EST¡ PENALIZANDO DE MANERA DOBLE EL PICK/PLACE DE DOS ROBOTS AUN CUANDO OCURRE EN UN MISMO PASO
+
 //#include "stdafx.h"
 
 /*

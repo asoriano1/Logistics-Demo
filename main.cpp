@@ -381,7 +381,7 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, vector < Robot > rob
 					Robot robotToMove = robotstomove.back();
 					//cout<<"el robot a mover es:"<<robotToMove.GetId()<<endl;
 					int k=0;
-					for(int i; i < scn.robots.size();i++)
+					for(int i=0; i < scn.robots.size();i++)
 						if(robotToMove.GetId()==newscn.robots[i].GetId()){
 							k=i;
 							break;
@@ -448,7 +448,7 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, vector < Robot > rob
 				Robot robotToMove = robotstomove.back();
 				//cout<<"el robot a mover es:"<<robotToMove.GetId()<<endl;
 				int k=0;
-				for(int i; i < scn.robots.size();i++)
+				for(int i=0; i < scn.robots.size();i++)
 					if(robotToMove.GetId()==newscn.robots[i].GetId()){
 						k=i;
 						break;

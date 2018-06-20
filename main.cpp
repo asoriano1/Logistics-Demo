@@ -43,7 +43,7 @@ Cart whichcartis(Scenario scn, Pose p);
 int whichcartis_indx(Scenario scn, Pose p);
 bool isalreadydefined(Scenario scn);
 void addtonodes(Scenario scn);
-void evolute_scn(Scenario scn, int ind, Pose p, bool level_up);
+void evolute_scn(Scenario scn, int ind, Pose p, vector < Robot > robotstomove, bool level_up);
 
 using namespace std;
 vector < Scenario > nodos;
@@ -76,7 +76,7 @@ int main()
 	Robots.push_back(Robot("r1", 0, 2));
 	Robots.push_back(Robot("r2", 1, 2));
 	//Robots.push_back(Robot("r3", 2, 2));
-
+	
 	vector < Cart > Carts;
 	Carts.push_back(Cart("c1", 0, 0));
 	Carts.push_back(Cart("c2", 1, 0));
@@ -98,9 +98,10 @@ int main()
 	scn.addCart(c1);
 	scn.addCart(c2);
 	*/
-	scn.print();
 	
 	scn.evaluate(cart_final_sel, pose_final_dest);
+	
+	scn.print();
 
 	cout << "-value-" << scn.value << endl;
 	
@@ -110,11 +111,13 @@ int main()
 	
 	vector <string> robots_visitados;
 	
-	//int iteraciones= 100;
+	
+	
+	int iteraciones= 50;
 
 
 	while (!nodos_activos.empty() /*&& iteraciones>0*/) {
-		//iteraciones--;
+		iteraciones--;
 		//al estar ordenados cojo siempre el primer elemento
 		scn_sel = nodos_activos.at(0);
 
@@ -124,7 +127,7 @@ int main()
 		nodos_activos.erase(nodos_activos.begin());
 		
 		//if value equals prof, end
-		cout << ">>>Derivando el nodo con value:" << scn_sel.value << " id:" << scn_sel.id << " " << endl;
+		cout << ">>>Derivando el nodo con value:" << scn_sel.value << " id:" << scn_sel.id << " <<<" << endl;
 		//if (scn_sel.value == scn_sel.prof) {
 		if(scn_sel.IsSolved(cart_final_sel, pose_final_dest)){
 			cout << " FIN." << endl;
@@ -135,17 +138,24 @@ int main()
 			
 			//for each robot
 			for (int i = 0; i < scn_sel.robots.size(); i++) {
+				//meto en una lista todos los robots menos el actual que voy a mover
+				vector < Robot > robottomove;
+				for (int k = 0; k < scn_sel.robots.size(); k++) {
+					if(i!=k){
+						robottomove.push_back(scn_sel.robots[k]);						
+					}
+				}
 				//add the new poses he can reach
 				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x + 1, scn_sel.robots[i].GetPose().y));
 				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x, scn_sel.robots[i].GetPose().y + 1));
 				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x - 1, scn_sel.robots[i].GetPose().y));
 				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x, scn_sel.robots[i].GetPose().y - 1));
 				
-				//for each candidate pose there is a new scenario
+				//for each candidate pose (4) there is a new scenario
 				while(!new_candidate_poses.empty()){
 					new_pose = new_candidate_poses.back();
-					new_candidate_poses.pop_back();			
-					evolute_scn(scn_sel, i, new_pose, true);
+					new_candidate_poses.pop_back();					
+					evolute_scn(scn_sel, i, new_pose, robottomove, true);
 
 				}
 
@@ -333,7 +343,8 @@ void addtonodes(Scenario scn) {
 	return;
 }
 
-void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, bool level_up){
+void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, vector < Robot > robotstomove, bool level_up){
+	
 
 	//derivar cada posición de cada robot
 	if (pose_valid(scn, dest_pose)) {
@@ -360,10 +371,23 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, bool level_up){
 			if (!isalreadydefined(newscn)) {
 				addtonodes(newscn);
 			}
-		
+			
+			
 			//y busca a partir de i en adelante, el resto de robots dónde puede moverse siempre que no haya otro robot en ese sitio
-			for (int k = i_robot+1; k < scn.robots.size(); k++) {
-
+			//for (int k = i_robot+1; k < scn.robots.size(); k++) {			
+			while(!robotstomove.empty()){
+					cout << "check el mov:" << robotstomove.back().GetId() << endl;
+					//find the robot moved and remove it from robotstomove
+					Robot robotToMove = robotstomove.back();
+					//cout<<"el robot a mover es:"<<robotToMove.GetId()<<endl;
+					int k=0;
+					for(int i; i < scn.robots.size();i++)
+						if(robotToMove.GetId()==newscn.robots[i].GetId()){
+							k=i;
+							break;
+						}
+					robotstomove.pop_back();
+					
 					vector < Pose > new_new_poses;
 					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x + 1, newscn.robots[k].GetPose().y)); //derecha
 					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y + 1)); //abajo
@@ -372,9 +396,12 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, bool level_up){
 					while(!new_new_poses.empty()){
 						new_new_pose = new_new_poses.back();
 						new_new_poses.pop_back();
-						evolute_scn(newscn, k, new_new_pose, false);
+						//si comento este print el algoritmo no funciona correctamente! ?¿?¿
+						//cout<<"intentando mover:"<<newscn.robots[k].GetId();						
+						evolute_scn(newscn, k, new_new_pose, robotstomove, false);
 					}							
 			 }
+			 cout << "no hay más que mover" <<endl;
 		}
 		
 		//mueve robots sin carros donde hay otros robots: Mover a la vez en la misma dirección:
@@ -389,6 +416,7 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, bool level_up){
 		//si ademas hay un carro en la misma posici n: puedo mover el carro conmigo
 		// ademas que si se va a mover con un carro y hay otro carro delante no puede moverse AUNQUE haya un robot tb
 		if (thereisacart(scn, scn.robots[i_robot].GetPose()) && !thereisacart(scn, dest_pose) && !thereisarobot(scn, dest_pose)) {
+			cout<<"mueve carro y robotstomove:"<< robotstomove.size() <<endl;
 			//es mas facil clonar.
 			Scenario newscn;
 			if(level_up){
@@ -413,7 +441,20 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, bool level_up){
 			
 			//y busca a partir de i en adelante, el resto de robots dónde puede moverse
 			//for (int k = i; k < scn_sel.robots.size(); k++) {			
-			for (int k = i_robot+1; k < scn.robots.size(); k++) {
+			//for (int k = i_robot+1; k < scn.robots.size(); k++) {
+			while(!robotstomove.empty()){
+				cout << "checkConCAR el mov:" << robotstomove.back().GetId() << endl;
+				//find the robot moved and remove it from robotstomove
+				Robot robotToMove = robotstomove.back();
+				//cout<<"el robot a mover es:"<<robotToMove.GetId()<<endl;
+				int k=0;
+				for(int i; i < scn.robots.size();i++)
+					if(robotToMove.GetId()==newscn.robots[i].GetId()){
+						k=i;
+						break;
+					}
+				robotstomove.pop_back();
+				
 				vector < Pose > new_new_poses;
 				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x + 1, newscn.robots[k].GetPose().y));
 				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y + 1));
@@ -422,7 +463,9 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, bool level_up){
 				while(!new_new_poses.empty()){
 					new_new_pose = new_new_poses.back();
 					new_new_poses.pop_back();
-					evolute_scn(newscn, k, new_new_pose, false);
+					//si descomento esto no funciona! ?¿?¿
+					//cout<<"intentando mover:"<<newscn.robots[k].GetId();
+					evolute_scn(newscn, k, new_new_pose, robotstomove, false);
 				}
 					
 			}

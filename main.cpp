@@ -3,8 +3,7 @@
 
 //TODO:
 
-//-  AÑADIR EN LA EVALUACIÓN EL CAMINO RECORRIDO CON CARRO COGIDO PARA MINIMIZAR RIESGOS
-//-  NO SE MUEVEN EN FILA CUANDO MUEVEN CARROS
+//-  DEBERÍA PENALIZAR CAMBIAR EL SENTIDO DEL MOVIMIENTO
 //-  SE ESTÁ PENALIZANDO DE MANERA DOBLE EL PICK/PLACE DE DOS ROBOTS AUN CUANDO OCURRE EN UN MISMO PASO
 
 //#include "stdafx.h"
@@ -40,6 +39,11 @@ maze[y][x]=false;
 #include "scenario.h"
 #include "cart.h"
 
+#define UP 1
+#define DOWN 2
+#define LEFT 3
+#define RIGHT 4
+
 bool pose_valid(Scenario scn, Pose p);
 bool thereisarobot(Scenario scn, Pose p);
 bool thereisacart(Scenario scn, Pose p);
@@ -49,7 +53,7 @@ Cart whichcartis(Scenario scn, Pose p);
 int whichcartis_indx(Scenario scn, Pose p);
 bool isalreadydefined(Scenario scn);
 void addtonodes(Scenario scn);
-void evolute_scn(Scenario scn, int ind, Pose p, vector < Robot > robotstomove, bool level_up);
+void evolute_scn(Scenario scn, int ind, int direction, vector < Robot > robotstomove, bool level_up, bool cartallowed);
 
 using namespace std;
 vector < Scenario > nodos;
@@ -62,6 +66,8 @@ Pose pose_final_dest;
 Cart cart_final_sel;
 Pose new_pose, new_new_pose;
 
+bool debug = true; 
+
 // Driver program to test methods of graph class
 int main()
 {
@@ -73,8 +79,12 @@ int main()
 
 	vector < Pose > new_candidate_poses;
 
-
-
+	//scenario:
+	//
+	//yx->
+	//|
+	//v
+	
 	//Robot r1 = Robot("r1", 0, 2);
 	//Robot r2 = Robot("r2", 1, 2);
 
@@ -86,6 +96,8 @@ int main()
 	vector < Cart > Carts;
 	Carts.push_back(Cart("c1", 0, 0));
 	Carts.push_back(Cart("c2", 1, 0));
+	//Carts.push_back(Cart("c1", 0, 2));
+	//Carts.push_back(Cart("c2", 1, 2));
 	Carts.push_back(Cart("c3", 1, 1));
 
 	global_scn_id = 0;
@@ -133,7 +145,7 @@ int main()
 		nodos_activos.erase(nodos_activos.begin());
 		
 		//if value equals prof, end
-		cout << ">>>Derivando el nodo con value:" << scn_sel.value << " id:" << scn_sel.id << " <<<" << endl;
+		if(debug)cout << ">>>Derivando el nodo con value:" << scn_sel.value << " id:" << scn_sel.id << " <<<" << endl;
 		//if (scn_sel.value == scn_sel.prof) {
 		if(scn_sel.IsSolved(cart_final_sel, pose_final_dest)){
 			cout << " FIN." << endl;
@@ -144,6 +156,7 @@ int main()
 			
 			//for each robot
 			for (int i = 0; i < scn_sel.robots.size(); i++) {
+				if(debug)cout << "1ºROBOT:" << scn_sel.robots[i].GetId() << endl;
 				//meto en una lista todos los robots menos el actual que voy a mover
 				vector < Robot > robottomove;
 				for (int k = 0; k < scn_sel.robots.size(); k++) {
@@ -152,21 +165,26 @@ int main()
 					}
 				}
 				//add the new poses he can reach
-				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x + 1, scn_sel.robots[i].GetPose().y));
+				/*new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x + 1, scn_sel.robots[i].GetPose().y));
 				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x, scn_sel.robots[i].GetPose().y + 1));
 				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x - 1, scn_sel.robots[i].GetPose().y));
-				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x, scn_sel.robots[i].GetPose().y - 1));
+				new_candidate_poses.push_back(Pose(scn_sel.robots[i].GetPose().x, scn_sel.robots[i].GetPose().y - 1));*/
 				
 				//for each candidate pose (4) there is a new scenario
-				while(!new_candidate_poses.empty()){
+				/*while(!new_candidate_poses.empty()){
 					new_pose = new_candidate_poses.back();
 					new_candidate_poses.pop_back();					
 					evolute_scn(scn_sel, i, new_pose, robottomove, true);
-
-				}
+					
+				}*/
+				
+				evolute_scn(scn_sel, i, UP, robottomove, true, true); 
+				evolute_scn(scn_sel, i, DOWN, robottomove, true, true); 
+				evolute_scn(scn_sel, i, LEFT, robottomove, true, true); 
+				evolute_scn(scn_sel, i, RIGHT, robottomove, true, true); 
 
 				//si no puede moverse nada
-				cout << "Robot " << scn_sel.robots[i].GetId() << " NO puede mover mas" << endl;
+				if(debug)cout << "1ºROBOT " << scn_sel.robots[i].GetId() << " NO puede mover mas" << endl;
 			}
 		}
 	}
@@ -319,7 +337,7 @@ void addtonodes(Scenario scn) {
 	if(nodos_activos.size()<=0){
 		nodos_activos.push_back(scn);
 		nodos.push_back(scn);
-		scn.print();
+		if(debug)scn.print();
 		return;
 	}
 	//si el valor del escenario es menor que el del primer nodo de activos lo meto el primero
@@ -327,7 +345,7 @@ void addtonodes(Scenario scn) {
 		nodos_activos.insert(nodos_activos.begin(), scn);
 		nodos.push_back(scn);
 		//cout << "escenario nuevo con id " << scn.id << ", se anyade el primero con value:" << scn.value << endl;
-		scn.print();
+		if(debug)scn.print();
 		return;
 	}
 	//busco donde meterlo de manera ordenada
@@ -337,7 +355,7 @@ void addtonodes(Scenario scn) {
 			nodos_activos.insert(it, scn);
 			nodos.push_back(scn);
 			//cout << "escenario nuevo con id " << scn.id << ", se anyade en " << i << " con value:" << scn.value << endl;
-			scn.print();
+			if(debug)scn.print();
 			return;
 		}
 	}
@@ -345,15 +363,17 @@ void addtonodes(Scenario scn) {
 	nodos_activos.push_back(scn);
 	nodos.push_back(scn);
 	//cout << "escenario nuevo con id " << scn.id << ", se anyade el ultimo con value:" << scn.value << endl;
-	scn.print();
+	if(debug)scn.print();
 	return;
 }
 
-void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, vector < Robot > robotstomove, bool level_up){
+void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robotstomove, bool level_up, bool cartallowed){
 	
-
+	cout << "1pero que robotstomove " << robotstomove.size() << endl;
+	Pose dest_pose = scn.robots[i_robot].GetPose().move(direction);
 	//derivar cada posición de cada robot
 	if (pose_valid(scn, dest_pose)) {
+		
 		//es mas facil clonar.
 		Scenario newscn;
 		if(level_up){			
@@ -362,6 +382,9 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, vector < Robot > rob
 			 
 			 newscn = Scenario(global_scn_id+1, scn.id_prev, scn.height, scn.width, scn.robots, scn.carts, scn.prof);
 		}
+		//almacena la posición de antes de moverse
+		//si lleva carro la posición estará prohibida para todos los robots
+		Pose pose_prev = newscn.robots[i_robot].GetPose();		
 		
 		//mueve robots sin carros:
 		//r1-> X
@@ -378,13 +401,16 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, vector < Robot > rob
 				addtonodes(newscn);
 			}
 			
-			
+			cout << "pero que robotstomove" << robotstomove.size() << endl;
 			//y busca a partir de i en adelante, el resto de robots dónde puede moverse siempre que no haya otro robot en ese sitio
 			//for (int k = i_robot+1; k < scn.robots.size(); k++) {			
-			while(!robotstomove.empty()){
-					cout << "check el mov:" << robotstomove.back().GetId() << endl;
-					//find the robot moved and remove it from robotstomove
-					Robot robotToMove = robotstomove.back();
+			vector < Robot > robotstomove0 = robotstomove;
+			
+			while(!robotstomove0.empty()){
+					
+					//find the robot moved and remove it from robotstomove					
+					if(debug)cout << "subrobot a mover:" << robotstomove0.back().GetId() << endl;
+					Robot robotToMove = robotstomove0.back();
 					//cout<<"el robot a mover es:"<<robotToMove.GetId()<<endl;
 					int k=0;
 					for(int i=0; i < scn.robots.size();i++)
@@ -392,9 +418,10 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, vector < Robot > rob
 							k=i;
 							break;
 						}
-					robotstomove.pop_back();
+					robotstomove0.pop_back();
 					
-					vector < Pose > new_new_poses;
+					if(debug)cout << "subrobot moviendo:" << newscn.robots[k].GetId() << endl;
+					/*vector < Pose > new_new_poses;
 					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x + 1, newscn.robots[k].GetPose().y)); //derecha
 					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y + 1)); //abajo
 					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x - 1, newscn.robots[k].GetPose().y)); //izquierda
@@ -403,11 +430,59 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, vector < Robot > rob
 						new_new_pose = new_new_poses.back();
 						new_new_poses.pop_back();
 						//si comento este print el algoritmo no funciona correctamente! ?¿?¿
-						//cout<<"intentando mover:"<<newscn.robots[k].GetId();						
-						evolute_scn(newscn, k, new_new_pose, robotstomove, false);
-					}							
+						cout<<"intentando mover:"<<newscn.robots[k].GetId()<<" con robotstomove:"<< robotstomove0.size()<<endl;
+												
+						evolute_scn(newscn, k, new_new_pose, robotstomove0, false);
+					}		*/
+					
+					//restricción de movimiento
+					//si va a moverse hacia arriba y es donde estaba el anterior robot					
+					if(pose_prev.equals(newscn.robots[k].GetPose().move(UP))){
+						//si el anterior robot se ha movido hacia arriba se debe permitir mover con/sin carga
+						if(direction==LEFT){
+							evolute_scn(newscn, k, UP, robotstomove0, false, true); 	
+						//si el anterior se movió derecha/izquierda sin carga, yo puedo moverme pero sin carga
+						}else if(!newscn.robots[i_robot].hasACart()){
+							evolute_scn(newscn, k, UP, robotstomove0, false, false); 	
+						}
+					}
+					//si va a moverse hacia abajo y es donde estaba el anterior robot					
+					if(pose_prev.equals(newscn.robots[k].GetPose().move(DOWN))){
+						//si el anterior robot se ha movido hacia abajo se debe permitir mover con/sin carga
+						if(direction==DOWN){
+							evolute_scn(newscn, k, DOWN, robotstomove0, false, true); 	
+						//si el anterior se movió derecha/izquierda sin carga, yo puedo moverme pero sin carga
+						}else if(!newscn.robots[i_robot].hasACart()){
+							evolute_scn(newscn, k, DOWN, robotstomove0, false, false); 	
+						}
+					}
+					//si va a moverse hacia izquierda y es donde estaba el anterior robot					
+					if(pose_prev.equals(newscn.robots[k].GetPose().move(LEFT))){
+						//si el anterior robot se ha movido hacia izquierda se debe permitir mover con/sin carga
+						if(direction==LEFT){
+							evolute_scn(newscn, k, LEFT, robotstomove0, false, true); 	
+						//si el anterior se movió arriba/abajo sin carga, yo puedo moverme pero sin carga
+						}else if(!newscn.robots[i_robot].hasACart()){
+							evolute_scn(newscn, k, LEFT, robotstomove0, false, false); 	
+						}
+					}
+					//si va a moverse hacia derecha y es donde estaba el anterior robot					
+					if(pose_prev.equals(newscn.robots[k].GetPose().move(RIGHT))){
+						//si el anterior robot se ha movido hacia derecha se debe permitir mover con/sin carga
+						if(direction==RIGHT){
+							evolute_scn(newscn, k, RIGHT, robotstomove0, false, true); 	
+						//si el anterior se movió arriba/abajo sin carga, yo puedo moverme pero sin carga
+						}else if(!newscn.robots[i_robot].hasACart()){
+							evolute_scn(newscn, k, RIGHT, robotstomove0, false, false); 	
+						}
+					}
+					//sin restricciones
+					//evolute_scn(newscn, k, UP, robotstomove0, false); 	
+					//evolute_scn(newscn, k, DOWN, robotstomove0, false); 
+					//evolute_scn(newscn, k, LEFT, robotstomove0, false); 
+					//evolute_scn(newscn, k, RIGHT, robotstomove0, false); 					
 			 }
-			 cout << "no hay más que mover" <<endl;
+			 if(debug)cout << "no hay más que mover" <<endl;
 		}
 		
 		//mueve robots sin carros donde hay otros robots: Mover a la vez en la misma dirección:
@@ -415,68 +490,104 @@ void evolute_scn(Scenario scn, int i_robot, Pose dest_pose, vector < Robot > rob
 		//r1-> r2 ->r3
 		//si se va a mover a la izquierda y hay otro robot, mira a ver si ese robot puede moverse a la izquierda
 		
-		
-		//mueve robots con carros:
-		//c1r1-> X
-		
-		//si ademas hay un carro en la misma posici n: puedo mover el carro conmigo
-		// ademas que si se va a mover con un carro y hay otro carro delante no puede moverse AUNQUE haya un robot tb
-		if (thereisacart(scn, scn.robots[i_robot].GetPose()) && !thereisacart(scn, dest_pose) && !thereisarobot(scn, dest_pose)) {
-			cout<<"mueve carro y robotstomove:"<< robotstomove.size() <<endl;
-			//es mas facil clonar.
-			Scenario newscn;
-			if(level_up){
-				newscn = Scenario(global_scn_id+1, scn.id, scn.height, scn.width, scn.robots, scn.carts, scn.prof+1);
-			}else{
-				newscn = Scenario(global_scn_id+1, scn.id_prev, scn.height, scn.width, scn.robots, scn.carts, scn.prof);
-			}
-							
-			//modificar robot
-			newscn.MoveRobotWithCartTo(scn.robots[i_robot], dest_pose);
-			//get the cart
-			int cart_indx = whichcartis_indx(newscn, scn.robots[i_robot].GetPose());
-			//modify the cart in the new scenario
-			//TODO: POR QUE AQU  ES INDICE?????
-			newscn.UpdateCartPose(newscn.carts[cart_indx], dest_pose);
-			//evaluar
-			newscn.evaluate(cart_final_sel, pose_final_dest);
-			//anyadir si no existe ya el escenario
-			if (!isalreadydefined(newscn)) {
-				addtonodes(newscn);
-			}
+		if(cartallowed){
+			//mueve robots con carros:
+			//c1r1-> X
 			
-			//y busca a partir de i en adelante, el resto de robots dónde puede moverse
-			//for (int k = i; k < scn_sel.robots.size(); k++) {			
-			//for (int k = i_robot+1; k < scn.robots.size(); k++) {
-			while(!robotstomove.empty()){
-				cout << "checkConCAR el mov:" << robotstomove.back().GetId() << endl;
-				//find the robot moved and remove it from robotstomove
-				Robot robotToMove = robotstomove.back();
-				//cout<<"el robot a mover es:"<<robotToMove.GetId()<<endl;
-				int k=0;
-				for(int i=0; i < scn.robots.size();i++)
-					if(robotToMove.GetId()==newscn.robots[i].GetId()){
-						k=i;
-						break;
-					}
-				robotstomove.pop_back();
-				
-				vector < Pose > new_new_poses;
-				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x + 1, newscn.robots[k].GetPose().y));
-				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y + 1));
-				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x - 1, newscn.robots[k].GetPose().y));
-				new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y - 1));
-				while(!new_new_poses.empty()){
-					new_new_pose = new_new_poses.back();
-					new_new_poses.pop_back();
-					//si descomento esto no funciona! ?¿?¿
-					//cout<<"intentando mover:"<<newscn.robots[k].GetId();
-					evolute_scn(newscn, k, new_new_pose, robotstomove, false);
+			//si ademas hay un carro en la misma posici n: puedo mover el carro conmigo
+			// ademas que si se va a mover con un carro y hay otro carro delante no puede moverse AUNQUE haya un robot tb
+			if (thereisacart(scn, scn.robots[i_robot].GetPose()) && !thereisacart(scn, dest_pose) && !thereisarobot(scn, dest_pose)) {
+				if(debug)cout<< scn.robots[i_robot].GetId() << " mueve carro y robotstomove:"<< robotstomove.size() <<endl;
+				//es mas facil clonar.
+				Scenario newscn;
+				if(level_up){
+					newscn = Scenario(global_scn_id+1, scn.id, scn.height, scn.width, scn.robots, scn.carts, scn.prof+1);
+				}else{
+					newscn = Scenario(global_scn_id+1, scn.id_prev, scn.height, scn.width, scn.robots, scn.carts, scn.prof);
 				}
-					
-			}
+								
+				//modificar robot
+				newscn.MoveRobotWithCartTo(scn.robots[i_robot], dest_pose);
+				//get the cart
+				int cart_indx = whichcartis_indx(newscn, scn.robots[i_robot].GetPose());
+				//modify the cart in the new scenario
+				//TODO: POR QUE AQU  ES INDICE?????
+				newscn.UpdateCartPose(newscn.carts[cart_indx], dest_pose);
+				//evaluar
+				newscn.evaluate(cart_final_sel, pose_final_dest);
+				//anyadir si no existe ya el escenario
+				if (!isalreadydefined(newscn)) {
+					addtonodes(newscn);
+				}
 				
-			
+				//y busca a partir de i en adelante, el resto de robots dónde puede moverse
+				//for (int k = i; k < scn_sel.robots.size(); k++) {			
+				//for (int k = i_robot+1; k < scn.robots.size(); k++) {
+				vector < Robot > robotstomove0 = robotstomove;
+				
+				while(!robotstomove0.empty()){
+					if(debug)cout << "checkConCAR el mov:" << robotstomove0.back().GetId() << endl;
+					//find the robot moved and remove it from robotstomove
+					Robot robotToMove = robotstomove0.back();
+					//cout<<"el robot a mover es:"<<robotToMove.GetId()<<endl;
+					int k=0;
+					for(int i=0; i < scn.robots.size();i++)
+						if(robotToMove.GetId()==newscn.robots[i].GetId()){
+							k=i;
+							break;
+						}
+					robotstomove0.pop_back();
+					
+					/*vector < Pose > new_new_poses;
+					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x + 1, newscn.robots[k].GetPose().y));
+					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y + 1));
+					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x - 1, newscn.robots[k].GetPose().y));
+					new_new_poses.push_back(Pose(newscn.robots[k].GetPose().x, newscn.robots[k].GetPose().y - 1));
+					while(!new_new_poses.empty()){
+						new_new_pose = new_new_poses.back();
+						new_new_poses.pop_back();
+						//si descomento esto no funciona! ?¿?¿
+						//cout<<"intentando mover:"<<newscn.robots[k].GetId();
+						evolute_scn(newscn, k, new_new_pose, robotstomove0, false);
+					}*/
+					/*evolute_scn(newscn, k, UP, robotstomove0, false); 
+					evolute_scn(newscn, k, DOWN, robotstomove0, false); 
+					evolute_scn(newscn, k, LEFT, robotstomove0, false); 
+					evolute_scn(newscn, k, RIGHT, robotstomove0, false); 		
+						*/
+					//restricción de movimiento
+					
+					//si va a moverse hacia arriba y es donde estaba el anterior robot					
+					if(pose_prev.equals(newscn.robots[k].GetPose().move(UP))){
+						//solo si el anterior robot se ha movido hacia arriba se debe permitir porque yo muevo con carro
+						if(direction==UP){
+							evolute_scn(newscn, k, UP, robotstomove0, false, true); 	
+						}												
+					}
+					//si va a moverse hacia abajo y es donde estaba el anterior robot					
+					if(pose_prev.equals(newscn.robots[k].GetPose().move(DOWN))){
+						//solo si el anterior robot se ha movido hacia abajo se debe permitir porque yo muevo con carro
+						if(direction==DOWN){
+							evolute_scn(newscn, k, DOWN, robotstomove0, false, true); 	
+						}
+					}
+					//si va a moverse hacia izquierda y es donde estaba el anterior robot					
+					if(pose_prev.equals(newscn.robots[k].GetPose().move(LEFT))){
+						//solo si el anterior robot se ha movido hacia izquierda se debe permitir porque yo muevo con carro
+						if(direction==LEFT){
+							evolute_scn(newscn, k, LEFT, robotstomove0, false, true); 	
+						}
+					}
+					//si va a moverse hacia derecha y es donde estaba el anterior robot					
+					if(pose_prev.equals(newscn.robots[k].GetPose().move(RIGHT))){
+						//solo si el anterior robot se ha movido hacia derecha se debe permitir porque yo muevo con carro
+						if(direction==RIGHT){
+							evolute_scn(newscn, k, RIGHT, robotstomove0, false, true); 	
+						}
+					}
+				}
+				
+			}
 		}
 		
 		

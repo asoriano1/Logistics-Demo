@@ -114,7 +114,11 @@ void Scenario::evaluate(Cart c, Pose dest) {
 		//count the total number of movements
 		total_movs = total_movs + this->robots[i].n_mov;
 	}
-	this->value = this->value + dist + this->prof + total_movs;
+	//305 nodos, 59 visitados sin movimientos 
+	//2655, 809 visitados con movimientos.
+	//1177, 308 visitados con 0.25*movimientos
+	//994, 197 visitados con 0.1*movimientos
+	this->value = this->value + dist + this->prof + 0.1*total_movs;
 	
 }
 
@@ -174,7 +178,8 @@ void Scenario::MoveRobotTo(Robot r, Pose p) {
 		if (r.GetId() == this->robots[i].GetId()) {
 			this->robots[i].SetPose(p);
 			this->robots[i].n_mov++;		
-			//para minimizar el coger/dejar carros se cuenta coger y dejar como un movimiento más	
+			//para minimizar el coger/dejar carros se cuenta coger y dejar como un movimiento más
+			//debería tener en cuenta que si varios robots lo hacen en el mismo paso no tiene sentido duplicarlo	
 			if(this->robots[i].hasACart()){
 				this->robots[i].placeCart();
 				this->robots[i].n_mov++;			
@@ -204,6 +209,7 @@ void Scenario::MoveRobotWithCartTo(Robot r, Pose p) {
 		if (r.GetId() == this->robots[i].GetId()) {
 			this->robots[i].SetPose(p);
 			this->robots[i].n_mov++;
+			this->robots[i].n_mov++; //penalización doble por moverse con carro
 			//para minimizar el coger/dejar carros se cuenta coger y dejar como un movimiento más
 			if(!this->robots[i].hasACart()){
 				this->robots[i].pickCart();

@@ -172,7 +172,9 @@ void Scenario::UpdateCartPose(Cart c, Pose p) {
 	}
 }
 
-void Scenario::MoveRobotTo(Robot r, Pose p) {
+void Scenario::MoveRobotTo(Robot r, int direction) {
+	
+	Pose p = r.GetPose().move(direction);
 	
 	for (int i = 0; i < this->robots.size(); ++i) {
 		if (r.GetId() == this->robots[i].GetId()) {
@@ -184,6 +186,15 @@ void Scenario::MoveRobotTo(Robot r, Pose p) {
 				this->robots[i].placeCart();
 				this->robots[i].n_mov++;			
 			}
+			
+			//Si el robot no está orientado hacia la posición que desea moverse, penalizo la corrección de orientación
+			//DEBERIA CALCULAR AQUÍ SI LA POSICIÓN NUEVA COINCIDE CON LA ORIENTACIÓN
+			if(direction!=r.GetPose().theta)
+				this->robots[i].n_mov=this->robots[i].n_mov+5;			
+			//¿PENALIZACIÓN DOBLE SI EL GIRO ES DE 180º?
+			
+			
+			
 			//cout << "el robot "<< this->robots[i].GetId() << " se ha movido "<< this->robots[i].n_mov << " veces" << endl;
 			//TODO:el hueco que deja solo ser? vac?o si no deja carro
 			//cout << " se pone el robot en y:" << p.y << endl;
@@ -203,7 +214,9 @@ void Scenario::MoveRobotTo(Robot r, Pose p) {
 	}
 }
 
-void Scenario::MoveRobotWithCartTo(Robot r, Pose p) {
+void Scenario::MoveRobotWithCartTo(Robot r, int direction) {
+
+	Pose p = r.GetPose().move(direction);
 	
 	for (int i = 0; i < this->robots.size(); ++i) {
 		if (r.GetId() == this->robots[i].GetId()) {
@@ -215,6 +228,11 @@ void Scenario::MoveRobotWithCartTo(Robot r, Pose p) {
 				this->robots[i].pickCart();
 				this->robots[i].n_mov++;			
 			}
+			
+			//Si el robot no está orientado hacia la posición que desea moverse, penalizo la corrección de orientación
+			if(direction!=r.GetPose().theta)
+				this->robots[i].n_mov=this->robots[i].n_mov+5;			
+				
 			//
 			//cout << "el robot "<< this->robots[i].GetId() << " se ha movido "<< this->robots[i].n_mov << " veces" << endl;
 			//TODO:el hueco que deja solo ser? vac?o si no deja carro

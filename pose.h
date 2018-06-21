@@ -13,10 +13,16 @@ class Pose {
 public:
 	int x;
 	int y;
+	int theta;
 	Pose() {};
 	Pose(int xx, int yy) {
 		this->x = xx;
 		this->y = yy;
+	};
+	Pose(int xx, int yy, int ttheta) {
+		this->x = xx;
+		this->y = yy;
+		this->theta = ttheta;
 	};
 	Pose moveUP() { return Pose(this->x, this->y-1); };
 	Pose moveDOWN() { return Pose(this->x, this->y+1); };

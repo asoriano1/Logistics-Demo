@@ -66,7 +66,7 @@ Pose pose_final_dest;
 Cart cart_final_sel;
 Pose new_pose, new_new_pose;
 
-bool debug = true; 
+bool debug = false; 
 
 // Driver program to test methods of graph class
 int main()
@@ -89,8 +89,8 @@ int main()
 	//Robot r2 = Robot("r2", 1, 2);
 
 	vector < Robot > Robots;
-	Robots.push_back(Robot("r1", 0, 2));
-	Robots.push_back(Robot("r2", 1, 2));
+	Robots.push_back(Robot("r1", 0, 2, UP));
+	//Robots.push_back(Robot("r2", 1, 2, UP));
 	//Robots.push_back(Robot("r3", 2, 2));
 	
 	vector < Cart > Carts;
@@ -99,6 +99,7 @@ int main()
 	//Carts.push_back(Cart("c1", 0, 2));
 	//Carts.push_back(Cart("c2", 1, 2));
 	Carts.push_back(Cart("c3", 1, 1));
+	Carts.push_back(Cart("c4", 0, 1));
 
 	global_scn_id = 0;
 	global_prof_id = 0;
@@ -369,7 +370,7 @@ void addtonodes(Scenario scn) {
 
 void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robotstomove, bool level_up, bool cartallowed){
 	
-	cout << "1pero que robotstomove " << robotstomove.size() << endl;
+	if(debug)cout << "1º pero que robotstomove " << robotstomove.size() << endl;
 	Pose dest_pose = scn.robots[i_robot].GetPose().move(direction);
 	//derivar cada posición de cada robot
 	if (pose_valid(scn, dest_pose)) {
@@ -393,7 +394,7 @@ void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robo
 		//si no hay ningún robot en la nueva posición puedo actualizar el escenario		
 		if(!thereisarobot(newscn, dest_pose)){
 			//modifica la posición (internamente añade un movimiento al robot)
-			newscn.MoveRobotTo(scn.robots[i_robot], dest_pose);			
+			newscn.MoveRobotTo(scn.robots[i_robot], direction);			
 			//evaluar
 			newscn.evaluate(cart_final_sel, pose_final_dest);			
 			//si no está definido ese escenario, se añade
@@ -401,7 +402,7 @@ void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robo
 				addtonodes(newscn);
 			}
 			
-			cout << "pero que robotstomove" << robotstomove.size() << endl;
+			if(debug)cout << "2º pero que robotstomove" << robotstomove.size() << endl;
 			//y busca a partir de i en adelante, el resto de robots dónde puede moverse siempre que no haya otro robot en ese sitio
 			//for (int k = i_robot+1; k < scn.robots.size(); k++) {			
 			vector < Robot > robotstomove0 = robotstomove;
@@ -438,16 +439,20 @@ void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robo
 					//restricción de movimiento
 					//si va a moverse hacia arriba y es donde estaba el anterior robot					
 					if(pose_prev.equals(newscn.robots[k].GetPose().move(UP))){
+						if(debug)cout<<"estaba antes aquí (UP)"<<endl;
 						//si el anterior robot se ha movido hacia arriba se debe permitir mover con/sin carga
-						if(direction==LEFT){
+						if(direction==UP){
 							evolute_scn(newscn, k, UP, robotstomove0, false, true); 	
 						//si el anterior se movió derecha/izquierda sin carga, yo puedo moverme pero sin carga
 						}else if(!newscn.robots[i_robot].hasACart()){
 							evolute_scn(newscn, k, UP, robotstomove0, false, false); 	
 						}
+					}else{
+						evolute_scn(newscn, k, UP, robotstomove0, false, true); 	
 					}
 					//si va a moverse hacia abajo y es donde estaba el anterior robot					
 					if(pose_prev.equals(newscn.robots[k].GetPose().move(DOWN))){
+						if(debug)cout<<"estaba antes aquí (DOWN)"<<endl;
 						//si el anterior robot se ha movido hacia abajo se debe permitir mover con/sin carga
 						if(direction==DOWN){
 							evolute_scn(newscn, k, DOWN, robotstomove0, false, true); 	
@@ -455,9 +460,12 @@ void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robo
 						}else if(!newscn.robots[i_robot].hasACart()){
 							evolute_scn(newscn, k, DOWN, robotstomove0, false, false); 	
 						}
+					}else{
+						evolute_scn(newscn, k, DOWN, robotstomove0, false, true); 	
 					}
 					//si va a moverse hacia izquierda y es donde estaba el anterior robot					
 					if(pose_prev.equals(newscn.robots[k].GetPose().move(LEFT))){
+						if(debug)cout<<"estaba antes aquí (LEFT)"<<endl;
 						//si el anterior robot se ha movido hacia izquierda se debe permitir mover con/sin carga
 						if(direction==LEFT){
 							evolute_scn(newscn, k, LEFT, robotstomove0, false, true); 	
@@ -465,9 +473,12 @@ void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robo
 						}else if(!newscn.robots[i_robot].hasACart()){
 							evolute_scn(newscn, k, LEFT, robotstomove0, false, false); 	
 						}
+					}else{
+						evolute_scn(newscn, k, LEFT, robotstomove0, false, true); 	
 					}
 					//si va a moverse hacia derecha y es donde estaba el anterior robot					
 					if(pose_prev.equals(newscn.robots[k].GetPose().move(RIGHT))){
+						if(debug)cout<<"estaba antes aquí (RIGHT)"<<endl;
 						//si el anterior robot se ha movido hacia derecha se debe permitir mover con/sin carga
 						if(direction==RIGHT){
 							evolute_scn(newscn, k, RIGHT, robotstomove0, false, true); 	
@@ -475,15 +486,22 @@ void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robo
 						}else if(!newscn.robots[i_robot].hasACart()){
 							evolute_scn(newscn, k, RIGHT, robotstomove0, false, false); 	
 						}
+					}else{
+						evolute_scn(newscn, k, RIGHT, robotstomove0, false, true); 	
 					}
-					//sin restricciones
-					//evolute_scn(newscn, k, UP, robotstomove0, false); 	
-					//evolute_scn(newscn, k, DOWN, robotstomove0, false); 
-					//evolute_scn(newscn, k, LEFT, robotstomove0, false); 
-					//evolute_scn(newscn, k, RIGHT, robotstomove0, false); 					
-			 }
+					/*if(){
+						if(debug)cout<<"sin restricciones (NADA)"<<endl;
+						//sin restricciones
+						evolute_scn(newscn, k, UP, robotstomove0, false, true); 	
+						evolute_scn(newscn, k, DOWN, robotstomove0, false, true); 
+						evolute_scn(newscn, k, LEFT, robotstomove0, false, true); 
+						evolute_scn(newscn, k, RIGHT, robotstomove0, false, true); 		
+					}			*/
+			}
 			 if(debug)cout << "no hay más que mover" <<endl;
-		}
+		}else{
+			 if(debug)cout << "ya hay un robot!" <<endl;
+			}
 		
 		//mueve robots sin carros donde hay otros robots: Mover a la vez en la misma dirección:
 		//Hay casos ya contemplados, por ejemplo, si uno se mueve a la izquierda donde hay un robot pero otro 
@@ -507,7 +525,7 @@ void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robo
 				}
 								
 				//modificar robot
-				newscn.MoveRobotWithCartTo(scn.robots[i_robot], dest_pose);
+				newscn.MoveRobotWithCartTo(scn.robots[i_robot], direction);
 				//get the cart
 				int cart_indx = whichcartis_indx(newscn, scn.robots[i_robot].GetPose());
 				//modify the cart in the new scenario
@@ -565,26 +583,31 @@ void evolute_scn(Scenario scn, int i_robot, int direction, vector < Robot > robo
 						}												
 					}
 					//si va a moverse hacia abajo y es donde estaba el anterior robot					
-					if(pose_prev.equals(newscn.robots[k].GetPose().move(DOWN))){
+					else if(pose_prev.equals(newscn.robots[k].GetPose().move(DOWN))){
 						//solo si el anterior robot se ha movido hacia abajo se debe permitir porque yo muevo con carro
 						if(direction==DOWN){
 							evolute_scn(newscn, k, DOWN, robotstomove0, false, true); 	
 						}
 					}
 					//si va a moverse hacia izquierda y es donde estaba el anterior robot					
-					if(pose_prev.equals(newscn.robots[k].GetPose().move(LEFT))){
+					else if(pose_prev.equals(newscn.robots[k].GetPose().move(LEFT))){
 						//solo si el anterior robot se ha movido hacia izquierda se debe permitir porque yo muevo con carro
 						if(direction==LEFT){
 							evolute_scn(newscn, k, LEFT, robotstomove0, false, true); 	
 						}
 					}
 					//si va a moverse hacia derecha y es donde estaba el anterior robot					
-					if(pose_prev.equals(newscn.robots[k].GetPose().move(RIGHT))){
+					else if(pose_prev.equals(newscn.robots[k].GetPose().move(RIGHT))){
 						//solo si el anterior robot se ha movido hacia derecha se debe permitir porque yo muevo con carro
 						if(direction==RIGHT){
 							evolute_scn(newscn, k, RIGHT, robotstomove0, false, true); 	
 						}
-					}
+					}else{
+						evolute_scn(newscn, k, UP, robotstomove0, false, true); 	
+						evolute_scn(newscn, k, DOWN, robotstomove0, false, true); 
+						evolute_scn(newscn, k, LEFT, robotstomove0, false, true); 
+						evolute_scn(newscn, k, RIGHT, robotstomove0, false, true);
+					} 		
 				}
 				
 			}

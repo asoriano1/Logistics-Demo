@@ -117,9 +117,9 @@ public:
 
 	void UpdateCartPose(Cart r, Pose p);
 	
-	void MoveRobotTo(Robot r, Pose p);
+	void MoveRobotTo(Robot r, int direction);
 	
-	void MoveRobotWithCartTo(Robot r, Pose p);
+	void MoveRobotWithCartTo(Robot r, int direction);
 	
 	bool IsSolved(Cart c, Pose p);
 };

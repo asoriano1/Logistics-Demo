@@ -14,9 +14,15 @@ private:
 	
 public:
 	Robot() {};
-	Robot(string ide, int x, int y){
+	/*Robot(string ide, int x, int y){
 		this->id = ide;
 		this->pose = Pose(x, y);
+		this->hasCart = false;
+		n_mov = 0;
+	};*/
+	Robot(string ide, int x, int y, int dir){
+		this->id = ide;
+		this->pose = Pose(x, y, dir);
 		this->hasCart = false;
 		n_mov = 0;
 	};
